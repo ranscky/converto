@@ -1,9 +1,11 @@
 const express = require('express');
 const app = express();
 const port = 3001;
+const cors = require('cors');
 
-app.get('/', (req, res) => {
-    res.send('Welcome to the Converto backend!');
+app.use(cors());
+app.get('/api/test', (req, res) => {
+    res.json({ message: 'Welcome to the Converto backend!' });
 });
 
 app.listen(port, () => {
