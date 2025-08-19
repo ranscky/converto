@@ -1,36 +1,89 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Converto
 
-## Getting Started
+A modern meeting intelligence platform that transforms audio recordings into actionable insights through AI-powered transcription, analysis, and integration.
 
-First, run the development server:
+## 🚀 Features
 
+- **Audio Processing**: Upload and process meeting recordings
+- **AI Analysis**: Generate summaries and insights using Hugging Face AI
+- **Data Storage**: Secure meeting data storage with MongoDB Atlas
+- **API Integration**: Ready for Slack, Jira, and Google Calendar integration
+
+## 🛠️ Tech Stack
+
+### Frontend
+- Next.js
+- TailwindCSS
+- React
+
+### Backend
+- Node.js
+- Express
+- MongoDB Atlas
+
+### AI & Integration
+- Hugging Face Inference API
+- Multer for file handling
+- Various API integrations (planned)
+
+## 🏁 Getting Started
+
+### Prerequisites
+- Node.js (LTS version)
+- MongoDB Atlas account
+- Hugging Face API key
+
+### Installation
+
+1. **Clone and Setup**
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone https://github.com/yourusername/converto.git
+cd converto
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. **Frontend Setup**
+```bash
+cd frontend
+npm install
+npm run dev
+```
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+3. **Backend Setup**
+```bash
+cd backend
+npm install
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+4. **Environment Configuration**
+Create `backend/.env`:
+```plaintext
+MONGODB_URI=your_mongodb_uri
+HUGGINGFACE_API_KEY=your_huggingface_key
+```
 
-## Learn More
+5. **Start the Server**
+```bash
+node index.js
+```
 
-To learn more about Next.js, take a look at the following resources:
+## 📝 Usage
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. Access the app at `http://localhost:3000`
+2. Upload an audio file
+3. Use the text generation feature to test AI capabilities
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 🚧 Current Development Status
 
-## Deploy on Vercel
+- ✅ Basic frontend UI
+- ✅ File upload system
+- ✅ MongoDB integration
+- ✅ Hugging Face AI integration
+- 🔄 Processing pipeline in development
+- 📅 API integrations planned
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 📋 Future Roadmap
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Automatic Speech Recognition
+- Real-time transcription
+- Meeting analytics dashboard
+- Integration with popular collaboration tools
