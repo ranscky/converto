@@ -7,6 +7,9 @@ const cors = require('cors');
 const { MongoClient } = require('mongodb')
 const { generateText } = require('./hf');
 const axios = require("axios");
+const multer = require('multer');
+const upload = multer({ dest: 'uploads/' });
+
 
 
 app.use(cors());
@@ -43,6 +46,10 @@ app.post('/api/generate', async (req, res) => {
       res.status(500).json({ error: error.message });
     }
   }
+});
+
+app.post('/api/upload', upload.single('audio'), async (req, res) => {
+  res.json({message: 'File uploaded successfully', file: req.file });
 });
 
 
