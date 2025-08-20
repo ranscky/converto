@@ -8,9 +8,21 @@ const { MongoClient } = require('mongodb')
 const { generateText } = require('./hf');
 const axios = require("axios");
 const multer = require('multer');
-const upload = multer({ dest: 'uploads/' });
+const e = require('express');
 
-
+//configure multer with file type validation
+const upload = multer({
+  dest: 'uploads/',
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = ['audio/mpeg', 'audio/wav', 'video/mp4'];
+      if (allowedTypes.includes(file.mimetype)) {
+        cb(null, true);
+      } else {
+        cb(new Error('Invalid file type. Only audio and video files are allowed.'));
+    }
+  },
+  limits: { fileSize: 100 * 1024 * 1024 } // limit file size to 100MB
+});
 
 app.use(cors());
 app.use(express.json());
@@ -49,6 +61,9 @@ app.post('/api/generate', async (req, res) => {
 });
 
 app.post('/api/upload', upload.single('audio'), async (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ message: 'No file uploaded or invalid file type' });
+  } 
   res.json({message: 'File uploaded successfully', file: req.file });
 });
 
