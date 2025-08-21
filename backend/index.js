@@ -8,7 +8,8 @@ const { MongoClient } = require('mongodb')
 const { generateText } = require('./hf');
 const axios = require("axios");
 const multer = require('multer');
-const e = require('express');
+const ffmpeg = require('fluent-ffmpeg');
+const path = require('path');
 
 //configure multer with file type validation
 const upload = multer({
@@ -29,6 +30,7 @@ app.use(express.json());
 const uri = process.env.MONGODB_URI
 const client = new MongoClient(uri);
 
+// AI Text Generation configuration
 app.post('/api/generate', async (req, res) => {
   try {
     const response = await axios.post(
@@ -60,11 +62,34 @@ app.post('/api/generate', async (req, res) => {
   }
 });
 
+// File upload and conversion configuration
 app.post('/api/upload', upload.single('audio'), async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ message: 'No file uploaded or invalid file type' });
   } 
-  res.json({message: 'File uploaded successfully', file: req.file });
+  const inputPath = req.file.path;
+  const outputPath = path.join('uploads', `${req.file.filename}.wav`);
+
+  if (req.file.mimetype === 'video/mp4') {
+    try {
+      await new Promise((resolve, reject) => {
+        ffmpeg(inputPath)
+        .output(outputPath)
+        .audioCodec('pcm_s16le')
+        .withAudioChannels(1)
+        .withAudioFrequency(16000) //Whisper requires 16kHz audio
+        .on('end', resolve)
+        .on('error', reject)
+        .run();
+      });
+      res.json({ message: 'File uploaded and converted successfully', filePath: outputPath });
+    } catch (e) {
+      res.status(500).json({ message: 'Error processing video file' + e.message });
+    }
+  } else {
+    // For audio files, just return the file path
+    res.json({ message: 'File uploaded successfully', file: req.file.path });
+  }
 });
 
 
