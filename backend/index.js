@@ -1,15 +1,15 @@
 require('dotenv').config();
-
-const express = require('express');
-const app = express();
-const port = 3001;
-const cors = require('cors');
 const { MongoClient } = require('mongodb')
-const { generateText } = require('./hf');
-const axios = require("axios");
+const express = require('express');
+const cors = require('cors');
 const multer = require('multer');
 const ffmpeg = require('fluent-ffmpeg');
 const path = require('path');
+const { generateText, transcribeAudio } = require('./hf');
+const app = express();
+const port = 3001;
+
+const axios = require("axios");
 
 //configure multer with file type validation
 const upload = multer({
@@ -68,10 +68,10 @@ app.post('/api/upload', upload.single('audio'), async (req, res) => {
     return res.status(400).json({ message: 'No file uploaded or invalid file type' });
   } 
   const inputPath = req.file.path;
-  const outputPath = path.join('uploads', `${req.file.filename}.wav`);
+  let outputPath = path.join('uploads', `${req.file.filename}.wav`);
 
-  if (req.file.mimetype === 'video/mp4') {
-    try {
+  try {
+    if (req.file.mimetype === 'video/mp4') {
       await new Promise((resolve, reject) => {
         ffmpeg(inputPath)
         .output(outputPath)
@@ -82,13 +82,13 @@ app.post('/api/upload', upload.single('audio'), async (req, res) => {
         .on('error', reject)
         .run();
       });
-      res.json({ message: 'File uploaded and converted successfully', filePath: outputPath });
-    } catch (e) {
-      res.status(500).json({ message: 'Error processing video file' + e.message });
-    }
   } else {
-    // For audio files, just return the file path
-    res.json({ message: 'File uploaded successfully', file: req.file.path });
+    outputPath = inputPath; //Use original file for .mp3/.wav
+  }
+  const transcription = await transcribeAudio(outputPath);
+  res.json({message: 'File uploaded and converted successfully', transcription });
+  } catch (e) {
+    res.status(500).json({ message: 'Error processing file'+ e.message });
   }
 });
 
