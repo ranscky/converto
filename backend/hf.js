@@ -41,16 +41,16 @@ async function transcribeAudio(filepath) {
       {
         headers: {
           Authorization: `Bearer ${process.env.HUGGINGFACE_API_KEY}`,
-          "Content-Type": "audio/wav",
+          "Content-Type": "audio/mpeg", // or "audio/wav" based on your file type
         },
         method: "POST",
-        body: audioBuffer, // send raw audio file
+        body: audioBuffer // send raw audio file
       }
     );
 
     const result = await response.json();
 
-    // Some responses have { text: "..."} while others may include full object
+    
     return result.text || JSON.stringify(result);
   } catch (e) {
     return `Transcription Error: ${e.message}`;

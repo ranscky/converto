@@ -27,8 +27,11 @@ const upload = multer({
 
 app.use(cors());
 app.use(express.json());
+// MongoDB configuration
 const uri = process.env.MONGODB_URI
-const client = new MongoClient(uri);
+const client = new MongoClient(uri, {
+  ssl: true,
+});
 
 // AI Text Generation configuration
 app.post('/api/generate', async (req, res) => {
@@ -64,6 +67,7 @@ app.post('/api/generate', async (req, res) => {
 
 // File upload and conversion configuration
 app.post('/api/upload', upload.single('audio'), async (req, res) => {
+  // Validate file presence
   if (!req.file) {
     return res.status(400).json({ message: 'No file uploaded or invalid file type' });
   } 
@@ -71,6 +75,7 @@ app.post('/api/upload', upload.single('audio'), async (req, res) => {
   let outputPath = path.join('uploads', `${req.file.filename}.wav`);
 
   try {
+    // Convert video to audio if needed
     if (req.file.mimetype === 'video/mp4') {
       await new Promise((resolve, reject) => {
         ffmpeg(inputPath)
@@ -85,14 +90,25 @@ app.post('/api/upload', upload.single('audio'), async (req, res) => {
   } else {
     outputPath = inputPath; //Use original file for .mp3/.wav
   }
+  // Transcribe audio
   const transcription = await transcribeAudio(outputPath);
-  res.json({message: 'File uploaded and converted successfully', transcription });
+  // Store transcription in MongoDB
+  await client.connect();
+  const database = client.db('converto');
+  const meetingID = `meeting_${Date.now()}`;
+  await database.collection('transcripts').insertOne({
+    meetingID,
+    transcription,
+    fileName: req.file.originalname,
+    timestamp: new Date()
+  });
+  res.json({message: 'File processed and stored', transcription, meetingID});
   } catch (e) {
-    res.status(500).json({ message: 'Error processing file'+ e.message });
+    res.status(500).json({ message: 'Error processing file - '+ e.message });
   }
 });
 
-
+// Start server
 app.listen(port, () => {
     console.log(`Server running at http://localhost:${port}`);
 });
