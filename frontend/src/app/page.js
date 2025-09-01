@@ -5,6 +5,8 @@ export default function Home() {
     const [prompt, setPrompt] = useState("");
     const [generated, setGenerated] = useState("");
     const [fileMessage, setFileMessage] = useState("");
+    const [ transcript, setTranscript ] = useState("");
+    const [ meetingID, setMeetingID ] = useState("");
 
     const handleGenerate = async () => {
         const res = await fetch("http://localhost:3001/api/generate", {
@@ -28,6 +30,8 @@ export default function Home() {
         });
         const data = await res.json();
         setFileMessage(data.message || "File uploaded successfully");
+        setTranscript(data.transcription || "");
+        setMeetingID(data.meetingID || "");
     };
 
     return (
@@ -36,11 +40,17 @@ export default function Home() {
             <p className="mt-4 text-lg text-gray-700">Upload your meeting audio to get started!</p>
             <input 
                 type="file"
-                accept="audio/*"
+                accept="audio/*, video/mp4"
                 onChange={handleFileUpload}
                 className="mt-4 p-2 border rounded text-gray-400"
             />
             <p className="mt-4 text-gray-700">{fileMessage}</p>
+            {transcript && (
+                <div className="mt-4 p-4 bg-white rounded shadow w-full max-w-2xl">
+                <h2 className="text-xl font-semibold text-gray-400">Transcript (Meeting ID: {meetingID})</h2>
+                <p className="mt-2 text-gray-700">{transcript}</p>
+        </div>
+            )}
             <input
                 type="text"
                 value={prompt}
