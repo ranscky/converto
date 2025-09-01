@@ -7,7 +7,14 @@ export default function Home() {
     const [fileMessage, setFileMessage] = useState("");
     const [ transcript, setTranscript ] = useState("");
     const [ meetingID, setMeetingID ] = useState("");
+    const [ transcripts, setTranscripts ] = useState([]);
 
+    useEffect(() => {
+        fetch('http://localhost:3001/api/transcripts')
+            .then(res => res.json())
+            .then(data => setTranscripts(data.transcripts || []));
+    }, []);
+    
     const handleGenerate = async () => {
         const res = await fetch("http://localhost:3001/api/generate", {
             method: "POST",
@@ -32,6 +39,10 @@ export default function Home() {
         setFileMessage(data.message || "File uploaded successfully");
         setTranscript(data.transcription || "");
         setMeetingID(data.meetingID || "");
+        // Refresh transcripts list
+        fetch('http://localhost:3001/api/transcripts')
+            .then(res => res.json())
+            .then(data => setTranscripts(data.transcripts || []));
     };
 
     return (
@@ -47,10 +58,21 @@ export default function Home() {
             <p className="mt-4 text-gray-700">{fileMessage}</p>
             {transcript && (
                 <div className="mt-4 p-4 bg-white rounded shadow w-full max-w-2xl">
-                <h2 className="text-xl font-semibold text-gray-400">Transcript (Meeting ID: {meetingID})</h2>
-                <p className="mt-2 text-gray-700">{transcript}</p>
-        </div>
+                    <h2 className="text-xl font-semibold text-gray-400">Transcript (Meeting ID: {meetingID})</h2>
+                    <p className="mt-2 text-gray-700">{transcript}</p>
+                </div>
             )}
+            <div className="mt-8 w-full max-w-2xl">
+                <h2 className="text-2xl font-semibold text-gray-400">Previous Transcripts</h2>
+                {transcripts && transcripts.map(t => (
+                    <div key={t.meetingID} className="mt-4 p-4 bg-white rounded shadow">
+                        <h3 className="text-lg font-medium text-gray-500">Meeting ID: {t.meetingID}</h3>
+                        <p className="text-sm text-gray-400">File: {t.fileName}</p>
+                        <p className="text-sm text-gray-400">Date: {new Date(t.timestamp).toLocaleString()}</p>
+                        <p className="mt-2 text-gray-400">{t.transcription.substring(0, 100)}...</p>
+                    </div>
+                ))}
+            </div>
             <input
                 type="text"
                 value={prompt}

@@ -114,7 +114,7 @@ app.get('/api/transcripts', async(req, res) => {
     await client.connect();
     const database = client.db('converto');
     const transcripts = await database.collection('transcripts').find({}).toArray();
-    res.json(transcripts);
+    res.json({transcripts});
   } catch (e) {
     res.status(500).json({ message: 'Error fetching transcripts - '+ e.message });
   }
