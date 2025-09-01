@@ -108,6 +108,18 @@ app.post('/api/upload', upload.single('audio'), async (req, res) => {
   }
 });
 
+// Transcript retrieval endpoint
+app.get('/api/transcripts', async(req, res) => {
+  try {
+    await client.connect();
+    const database = client.db('converto');
+    const transcripts = await database.collection('transcripts').find({}).toArray();
+    res.json(transcripts);
+  } catch (e) {
+    res.status(500).json({ message: 'Error fetching transcripts - '+ e.message });
+  }
+});
+
 // Start server
 app.listen(port, () => {
     console.log(`Server running at http://localhost:${port}`);
