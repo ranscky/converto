@@ -11,6 +11,8 @@ const port = 3001;
 
 const axios = require("axios");
 
+const fs = require('fs').promises;
+
 //configure multer with file type validation
 const upload = multer({
   dest: 'uploads/',
@@ -102,6 +104,11 @@ app.post('/api/upload', upload.single('audio'), async (req, res) => {
     fileName: req.file.originalname,
     timestamp: new Date()
   });
+  // Clean up uploaded files
+  await fs.unlink(inputPath);
+  if(req.file.mimetype === 'video/mp4') {
+    await fs.unlink(outputPath);
+  }
   res.json({message: 'File processed and stored', transcription, meetingID});
   } catch (e) {
     res.status(500).json({ message: 'Error processing file - '+ e.message });
