@@ -46,26 +46,27 @@ export default function Home() {
     };
 
     return (
-        <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center">
-            <h1 className="text-4xl font-bold text-blue-600">Welcome to Converto</h1>
-            <p className="mt-4 text-lg text-gray-700">Upload your meeting audio to get started!</p>
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-gray-100 flex flex-col items-center p-6">
+            <h1 className="text-5xl font-extrabold text-blue-700 mb-6">Converto</h1>
+            <p className="text-xl text-gray-600 mb-8">Transform your meetings with AI-powered transcription</p>
+            <div className="w-full max-w-3xl bg-white rounded-lg shadow-lg p-6"></div>
             <input 
                 type="file"
                 accept="audio/*, video/mp4"
                 onChange={handleFileUpload}
                 className="mt-4 p-2 border rounded text-gray-400"
             />
-            <p className="mt-4 text-gray-700">{fileMessage}</p>
+            <p className="text-green-600 mb-4">{fileMessage}</p>
             {transcript && (
-                <div className="mt-4 p-4 bg-white rounded shadow w-full max-w-2xl">
-                    <h2 className="text-xl font-semibold text-gray-400">Transcript (Meeting ID: {meetingID})</h2>
+                <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                    <h2 className="text-2xl font-semibold text-gray-800">Transcript (ID: {meetingID})</h2>
                     <p className="mt-2 text-gray-700">{transcript}</p>
                 </div>
             )}
-            <div className="mt-8 w-full max-w-2xl">
-                <h2 className="text-2xl font-semibold text-gray-400">Previous Transcripts</h2>
+            <div className="mb-6">
+                <h2 className="text-2xl font-semibold text-gray-800">Previous Transcripts</h2>
                 {transcripts && transcripts.map(t => (
-                    <div key={t.meetingID} className="mt-4 p-4 bg-white rounded shadow">
+                    <div key={t.meetingID} className="mt-4 p-4 bg-gray-50 rounded lg">
                         <h3 className="text-lg font-medium text-gray-500">Meeting ID: {t.meetingID}</h3>
                         <p className="text-sm text-gray-400">File: {t.fileName}</p>
                         <p className="text-sm text-gray-400">Date: {new Date(t.timestamp).toLocaleString()}</p>
@@ -77,12 +78,12 @@ export default function Home() {
                 type="text"
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
-                placeholder="Enter your prompt here"
-                className="mt-4 p-2 border rounded w-64 text-gray-700"
+                placeholder="Enter a prompt for text generation"
+                className="p-3 border border-gray-300 rounded-lg w-full mb-4"
             />
             <button
                 onClick={handleGenerate}
-                className="mt-4 bg-blue-600 text-white p-2 rounded hover:bg-blue-700"
+                className="bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 w-full"
             >
                 Generate Response
             </button>
