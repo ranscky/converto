@@ -17,7 +17,7 @@ const fs = require('fs').promises;
 const upload = multer({
   dest: 'uploads/',
   fileFilter: (req, file, cb) => {
-    const allowedTypes = ['audio/mpeg', 'audio/wav', 'video/mp4'];
+    const allowedTypes = ['audio/mpeg', 'audio/wav', 'video/mp4', 'audio/webm'];
       if (allowedTypes.includes(file.mimetype)) {
         cb(null, true);
       } else {
