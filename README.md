@@ -79,11 +79,7 @@ node index.js
 - ✅ MongoDB integration
 - ✅ Hugging Face AI integration
 - 🔄 Processing pipeline in development
+- 🔄 Live recording and chunked upload support
+- ✅ Transcript display and meeting ID assignment
+- ⚠️ Error handling and file cleanup improvements
 - 📅 API integrations planned
-
-## 📋 Future Roadmap
-
-- Automatic Speech Recognition
-- Real-time transcription
-- Meeting analytics dashboard
-- Integration with popular collaboration tools
