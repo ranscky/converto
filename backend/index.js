@@ -1,22 +1,41 @@
 require('dotenv').config();
-
+const { MongoClient } = require('mongodb')
 const express = require('express');
+const cors = require('cors');
+const multer = require('multer');
+const ffmpeg = require('fluent-ffmpeg');
+const path = require('path');
+const { generateText, transcribeAudio } = require('./hf');
 const app = express();
 const port = 3001;
-const cors = require('cors');
-const { MongoClient } = require('mongodb')
-const { generateText } = require('./hf');
+
 const axios = require("axios");
-const multer = require('multer');
-const upload = multer({ dest: 'uploads/' });
 
+const fs = require('fs').promises;
 
+//configure multer with file type validation
+const upload = multer({
+  dest: 'uploads/',
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = ['audio/mpeg', 'audio/wav', 'video/mp4', 'audio/webm'];
+      if (allowedTypes.includes(file.mimetype)) {
+        cb(null, true);
+      } else {
+        cb(new Error('Invalid file type. Only audio and video files are allowed.'));
+    }
+  },
+  limits: { fileSize: 100 * 1024 * 1024 } // limit file size to 100MB
+});
 
 app.use(cors());
 app.use(express.json());
+// MongoDB configuration
 const uri = process.env.MONGODB_URI
-const client = new MongoClient(uri);
+const client = new MongoClient(uri, {
+  ssl: true,
+});
 
+// AI Text Generation configuration
 app.post('/api/generate', async (req, res) => {
   try {
     const response = await axios.post(
@@ -48,11 +67,68 @@ app.post('/api/generate', async (req, res) => {
   }
 });
 
+// File upload and conversion configuration
 app.post('/api/upload', upload.single('audio'), async (req, res) => {
-  res.json({message: 'File uploaded successfully', file: req.file });
+  // Validate file presence
+  if (!req.file) {
+    return res.status(400).json({ message: 'No file uploaded or invalid file type' });
+  } 
+  const inputPath = req.file.path;
+  let outputPath = path.join('uploads', `${req.file.filename}.wav`);
+
+  try {
+    // Convert video to audio if needed
+    if (req.file.mimetype === 'video/mp4') {
+      await new Promise((resolve, reject) => {
+        ffmpeg(inputPath)
+        .output(outputPath)
+        .audioCodec('pcm_s16le')
+        .withAudioChannels(1)
+        .withAudioFrequency(16000) //Whisper requires 16kHz audio
+        .on('end', resolve)
+        .on('error', reject)
+        .run();
+      });
+  } else {
+    outputPath = inputPath; //Use original file for .mp3/.wav
+  }
+  // Transcribe audio
+  const transcription = await transcribeAudio(outputPath);
+  // Store transcription in MongoDB
+  await client.connect();
+  const database = client.db('converto');
+  const meetingID = `meeting_${Date.now()}`;
+  await database.collection('transcripts').createIndex({ meetingID: 1 });
+  await database.collection('transcripts').insertOne({
+    meetingID,
+    transcription,
+    fileName: req.file.originalname,
+    timestamp: new Date()
+  });
+  // Clean up uploaded files
+  await fs.unlink(inputPath);
+  if(req.file.mimetype === 'video/mp4') {
+    await fs.unlink(outputPath);
+  }
+  res.json({message: 'File processed and stored', transcription, meetingID});
+  } catch (e) {
+    res.status(500).json({ message: 'Error processing file - '+ e.message });
+  }
 });
 
+// Transcript retrieval endpoint
+app.get('/api/transcripts', async(req, res) => {
+  try {
+    await client.connect();
+    const database = client.db('converto');
+    const transcripts = await database.collection('transcripts').find({}).toArray();
+    res.json({transcripts});
+  } catch (e) {
+    res.status(500).json({ message: 'Error fetching transcripts - '+ e.message });
+  }
+});
 
+// Start server
 app.listen(port, () => {
     console.log(`Server running at http://localhost:${port}`);
 });
