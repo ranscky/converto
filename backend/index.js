@@ -107,7 +107,7 @@ app.post('/api/upload', upload.single('audio'), async (req, res) => {
   });
   // Clean up uploaded files
   await fs.unlink(inputPath);
-  if(req.file.mimetype === 'video/mp4' || req.file.mimetype === 'audio/webm') {
+  if(req.file.mimetype === 'video/mp4') {
     await fs.unlink(outputPath);
   }
   res.json({message: 'File processed and stored', transcription, meetingID});
