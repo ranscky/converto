@@ -2,21 +2,24 @@
 import { useEffect, useState, useRef } from "react";
 
 export default function Home() {
-    const [prompt, setPrompt] = useState("");
-    const [generated, setGenerated] = useState("");
-    const [fileMessage, setFileMessage] = useState("");
+    const [ prompt, setPrompt ] = useState("");
+    const [ generated, setGenerated ] = useState("");
+    const [ fileMessage, setFileMessage ] = useState("");
     const [ transcript, setTranscript ] = useState("");
     const [ meetingID, setMeetingID ] = useState("");
     const [ transcripts, setTranscripts ] = useState([]);
     const [ isRecording, setIsRecording ] = useState(false);
+
     const mediaRecorderRef = useRef(null);
 
+    // Fetch previous transcripts on load
     useEffect(() => {
         fetch('http://localhost:3001/api/transcripts')
             .then(res => res.json())
             .then(data => setTranscripts(data.transcripts || []));
     }, []);
-    
+
+    // AI generation handler
     const handleGenerate = async () => {
         const res = await fetch("http://localhost:3001/api/generate", {
             method: "POST",
@@ -27,6 +30,7 @@ export default function Home() {
         setGenerated(data.generated);
     }
 
+    // File upload handler
     const handleFileUpload = async (e) => {
         const file = e.target.files[0];
         const formData = new FormData();
@@ -45,6 +49,7 @@ export default function Home() {
             .then(data => setTranscripts(data.transcripts || []));
     };
 
+    // Live recording handlers
     const startRecording = async () => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -66,7 +71,7 @@ export default function Home() {
                 fetch('http://localhost:3001/api/transcripts')
                     .then(res => res.json())
                     .then(data => setTranscripts(data.transcripts || []));
-            };
+            }
         } catch (error) {
             setFileMessage ("Error accessing microphone: " + error.message);
         }
@@ -74,10 +79,10 @@ export default function Home() {
 
     const stopRecording = () => {
         if (mediaRecorderRef.current) {
-                mediaRecorderRef.current.stop();
-                setIsRecording(false);
-            };
-        }
+            mediaRecorderRef.current.stop();
+            setIsRecording(false);
+        };
+    }
     
 
     return (

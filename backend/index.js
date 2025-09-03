@@ -98,6 +98,7 @@ app.post('/api/upload', upload.single('audio'), async (req, res) => {
   await client.connect();
   const database = client.db('converto');
   const meetingID = `meeting_${Date.now()}`;
+  await database.collection('transcripts').createIndex({ meetingID: 1 });
   await database.collection('transcripts').insertOne({
     meetingID,
     transcription,
@@ -106,7 +107,7 @@ app.post('/api/upload', upload.single('audio'), async (req, res) => {
   });
   // Clean up uploaded files
   await fs.unlink(inputPath);
-  if(req.file.mimetype === 'video/mp4') {
+  if(req.file.mimetype === 'video/mp4' || req.file.mimetype === 'audio/webm') {
     await fs.unlink(outputPath);
   }
   res.json({message: 'File processed and stored', transcription, meetingID});
