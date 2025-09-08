@@ -5,7 +5,7 @@ const cors = require('cors');
 const multer = require('multer');
 const ffmpeg = require('fluent-ffmpeg');
 const path = require('path');
-const { generateText, transcribeAudio } = require('./hf');
+const { generateText, transcribeAudio, translateText } = require('./hf');
 const app = express();
 const port = 3001;
 
@@ -94,6 +94,13 @@ app.post('/api/upload', upload.single('audio'), async (req, res) => {
   }
   // Transcribe audio
   const transcription = await transcribeAudio(outputPath);
+
+  // Optional: Translate transcription
+  const translations = {};
+  for (const lang of ['es', 'fr', 'ru', 'zh']) {
+    translations[lang] = await translateText(transcription, lang);
+  }
+
   // Store transcription in MongoDB
   await client.connect();
   const database = client.db('converto');
@@ -102,6 +109,7 @@ app.post('/api/upload', upload.single('audio'), async (req, res) => {
   await database.collection('transcripts').insertOne({
     meetingID,
     transcription,
+    translations,
     fileName: req.file.originalname,
     timestamp: new Date()
   });
@@ -110,7 +118,7 @@ app.post('/api/upload', upload.single('audio'), async (req, res) => {
   if(req.file.mimetype === 'video/mp4') {
     await fs.unlink(outputPath);
   }
-  res.json({message: 'File processed and stored', transcription, meetingID});
+  res.json({message: 'File processed and stored', transcription, meetingID, translations});
   } catch (e) {
     res.status(500).json({ message: 'Error processing file - '+ e.message });
   }

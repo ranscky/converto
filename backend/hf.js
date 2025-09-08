@@ -57,4 +57,24 @@ async function transcribeAudio(filepath) {
   }
 }
 
-module.exports = { generateText, transcribeAudio };
+async function translateText(text, targetLanguage) {
+  const modelMap = {
+    'ru': 'Helsinki-NLP/opus-mt-en-ru', // German
+    'es': 'Helsinki-NLP/opus-mt-en-es', // Spanish
+    'fr': 'Helsinki-NLP/opus-mt-en-fr', // French
+    'zh': 'Helsinki-NLP/opus-mt-en-zh', // Chinese
+    // Add more language mappings as needed
+  };
+  try {
+    const response = await axios.post(
+      `https://api-inference.huggingface.co/models/${modelMap[targetLanguage]}`,
+      { inputs: text },
+      { headers: { Authorization: `Bearer ${process.env.HUGGINGFACE_API_KEY}` } },
+    );
+    return response.data[0].translation_text;
+  } catch (error) {
+    return `Translation Error: ${error.message}`;
+  }
+}
+
+module.exports = { generateText, transcribeAudio, translateText };
