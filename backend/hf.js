@@ -2,6 +2,7 @@ const axios = require('axios');
 const fs = require('fs');
 require('dotenv').config();
 
+// Function to generate text using Hugging Face's chat completion API
 async function generateText(prompt) {
   try {
     const response = await axios.post(
@@ -30,6 +31,7 @@ async function generateText(prompt) {
   }
 }
 
+// Function to transcribe audio using Hugging Face's Whisper model
 async function transcribeAudio(filepath) {
   try {
     // Read the audio file into a buffer
@@ -57,6 +59,7 @@ async function transcribeAudio(filepath) {
   }
 }
 
+// Function to translate text using Hugging Face translation models
 async function translateText(text, targetLanguage) {
   const modelMap = {
     'ru': 'Helsinki-NLP/opus-mt-en-ru', // German
@@ -77,4 +80,18 @@ async function translateText(text, targetLanguage) {
   }
 }
 
-module.exports = { generateText, transcribeAudio, translateText };
+// Function to summarize text using Hugging Face's summarization model
+async function summarizeText(text) {
+  try {
+    const response = await axios.post(
+      "https://api-inference.huggingface.co/models/facebook/bart-large-cnn",
+      { inputs: text },
+      { headers: { Authorization: `Bearer ${process.env.HUGGINGFACE_API_KEY}` } },
+    );
+    return response.data[0].summary_text;
+  } catch (error) {
+    return `Summarization Error: ${error.message}`;
+  }
+}
+
+module.exports = { generateText, transcribeAudio, translateText, summarizeText };
