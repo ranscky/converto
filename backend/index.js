@@ -75,6 +75,7 @@ app.post('/api/upload', upload.single('audio'), async (req, res) => {
   } 
   const inputPath = req.file.path;
   let outputPath = path.join('uploads', `${req.file.filename}.wav`);
+  const selectedLanguages = req.body.languages ? req.body.languages.split(',') : ['es', 'fr', 'ru', 'zh'];
 
   try {
     // Convert video to audio if needed
@@ -97,7 +98,7 @@ app.post('/api/upload', upload.single('audio'), async (req, res) => {
 
   // Optional: Translate transcription
   const translations = {};
-  for (const lang of ['es', 'fr', 'ru', 'zh']) {
+  for (const lang of selectedLanguages) {
     translations[lang] = await translateText(transcription, lang);
   }
 
