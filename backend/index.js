@@ -119,6 +119,7 @@ app.post('/api/upload', upload.single('audio'), async (req, res) => {
     fileName: req.file.originalname,
     timestamp: new Date()
   });
+
   // Clean up uploaded files
   await fs.unlink(inputPath);
   if(req.file.mimetype === 'video/mp4') {

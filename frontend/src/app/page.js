@@ -8,11 +8,11 @@ export default function Home() {
     const [ transcript, setTranscript ] = useState("");
     const [ meetingID, setMeetingID ] = useState("");
     const [ transcripts, setTranscripts ] = useState([]);
-    const [ isRecording, setIsRecording ] = useState(false);
+    const [ summary, setSummary ] = useState("");
+    // const [ isRecording, setIsRecording ] = useState(false);
     const [ selectedLanguages, setSelectedLanguages ] = useState(['es', 'fr', 'ru', 'zh']);
     const [ translations, setTranslations ] = useState({});
-
-    const mediaRecorderRef = useRef(null);
+    // const mediaRecorderRef = useRef(null);
 
     // Fetch previous transcripts on load
     useEffect(() => {
@@ -45,6 +45,7 @@ export default function Home() {
         const data = await res.json();
         setFileMessage(data.message || "File uploaded successfully");
         setTranscript(data.transcription || "");
+        setSummary(data.summary || "");
         setMeetingID(data.meetingID || "");
         setTranslations(data.translations || {});
         // Refresh transcripts list
@@ -61,40 +62,40 @@ export default function Home() {
     }
 
     // Live recording handlers
-    const startRecording = async () => {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            mediaRecorderRef.current = new MediaRecorder(stream);
-            mediaRecorderRef.current.start();
-            setIsRecording(true);
-            mediaRecorderRef.current.ondataavailable = async (event) => {
-                const formData = new FormData();
-                formData.append("audio", event.data, "recording.webm");
-                const res = await fetch('http://localhost:3001/api/upload', {
-                    method: 'POST',
-                    body: formData,
-                });
-                const data = await res.json();
-                setFileMessage(data.message || "Recording uploaded successfully");
-                setTranscript(data.transcription || "");
-                setMeetingID(data.meetingID || "");
-                // Refresh transcripts list
-                fetch('http://localhost:3001/api/transcripts')
-                    .then(res => res.json())
-                    .then(data => setTranscripts(data.transcripts || []));
-            }
-        } catch (error) {
-            setFileMessage ("Error accessing microphone: " + error.message);
-        }
-    };
+    // const startRecording = async () => {
+    //     try {
+    //         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    //         mediaRecorderRef.current = new MediaRecorder(stream);
+    //         mediaRecorderRef.current.start();
+    //         setIsRecording(true);
+    //         mediaRecorderRef.current.ondataavailable = async (event) => {
+    //             const formData = new FormData();
+    //             formData.append("audio", event.data, "recording.webm");
+    //             const res = await fetch('http://localhost:3001/api/upload', {
+    //                 method: 'POST',
+    //                 body: formData,
+    //             });
+    //             const data = await res.json();
+    //             setFileMessage(data.message || "Recording uploaded successfully");
+    //             setTranscript(data.transcription || "");
+    //             setMeetingID(data.meetingID || "");
+    //             // Refresh transcripts list
+    //             fetch('http://localhost:3001/api/transcripts')
+    //                 .then(res => res.json())
+    //                 .then(data => setTranscripts(data.transcripts || []));
+    //         }
+    //     } catch (error) {
+    //         setFileMessage ("Error accessing microphone: " + error.message);
+    //     }
+    // };
 
     // Stop recording handler
-    const stopRecording = () => {
-        if (mediaRecorderRef.current) {
-            mediaRecorderRef.current.stop();
-            setIsRecording(false);
-        };
-    }
+    // const stopRecording = () => {
+    //     if (mediaRecorderRef.current) {
+    //         mediaRecorderRef.current.stop();
+    //         setIsRecording(false);
+    //     };
+    // }
     
 
     return (
@@ -131,20 +132,26 @@ export default function Home() {
                 className="mt-4 p-2 border rounded text-gray-400"
             />
             {/* Recording controls */}
-            <button
+            {/* <button
                 onClick={isRecording ? stopRecording : startRecording}
                 className={
                     `mb-4 p-3 rounded-lg ${isRecording ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'} text-white`
                 }
             >
                 {isRecording ? 'Stop Recording' : 'Start Live Recording'}
-            </button>
+            </button> */}
 
             <p className="text-green-600 mb-4">{fileMessage}</p>
             {transcript && (
                 <div className="mb-6 p-4 bg-gray-50 rounded-lg">
                     <h2 className="text-2xl font-semibold text-gray-800">Transcript (ID: {meetingID})</h2>
                     <p className="mt-2 text-gray-700">{transcript}</p>
+                    {summary && (
+                        <div className="mt-4">
+                            <h3 className="text-xl font-semibold text-gray-800">Summary</h3>
+                            <p className="text-gray-700">{summary}</p>
+                        </div>
+                    )}
                     {Object.keys(translations).length > 0 && (
                         <div className="mt-4">
                             <h3 className="text-xl font-semibold text-gray-800">Translations</h3>
