@@ -5,7 +5,7 @@ const cors = require('cors');
 const multer = require('multer');
 const ffmpeg = require('fluent-ffmpeg');
 const path = require('path');
-const { generateText, transcribeAudio, translateText, summarizeText } = require('./hf');
+const { generateText, transcribeAudio, translateText, summarizeText, generateStructuredNotes } = require('./hf');
 const app = express();
 const port = 3001;
 
@@ -68,8 +68,9 @@ app.post('/api/generate', async (req, res) => {
   }
 });
 
-// File upload and conversion configuration
+// File upload and processing endpoint
 app.post('/api/upload', upload.single('audio'), async (req, res) => {
+
   // Validate file presence
   if (!req.file) {
     return res.status(400).json({ message: 'No file uploaded or invalid file type' });
@@ -100,6 +101,9 @@ app.post('/api/upload', upload.single('audio'), async (req, res) => {
   // Optional: Summarize transcription
   const summary = await summarizeText(transcription);
 
+  // Optional: Generate structured notes
+  const structuredNotes = await generateStructuredNotes(transcription);
+
   // Optional: Translate transcription
   const translations = {};
   for (const lang of selectedLanguages) {
@@ -115,6 +119,7 @@ app.post('/api/upload', upload.single('audio'), async (req, res) => {
     meetingID,
     transcription,
     summary,
+    structuredNotes,
     translations,
     fileName: req.file.originalname,
     timestamp: new Date()
@@ -125,7 +130,7 @@ app.post('/api/upload', upload.single('audio'), async (req, res) => {
   if(req.file.mimetype === 'video/mp4') {
     await fs.unlink(outputPath);
   }
-  res.json({message: 'File processed and stored', transcription, meetingID, summary, translations});
+  res.json({message: 'File processed and stored', meetingID, transcription, summary, translations, structuredNotes });
   } catch (e) {
     res.status(500).json({ message: 'Error processing file - '+ e.message });
   }

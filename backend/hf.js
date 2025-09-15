@@ -94,4 +94,54 @@ async function summarizeText(text) {
   }
 }
 
-module.exports = { generateText, transcribeAudio, translateText, summarizeText };
+// Function to generate structured notes (decisions, tasks, deadlines) from summary
+async function generateStructuredNotes(summary) {
+  const prompt = `You are an AI meeting assistant. 
+    From the following meeting summary, extract ONLY the clear decisions, tasks, and deadlines mentioned. 
+    Return valid JSON without any extra text. 
+    If none are found, return empty arrays.
+
+    Summary: "${summary}"
+
+    Format:
+      {
+        "decisions": ["..."],
+        "tasks": ["..."],
+        "deadlines": ["..."]
+      }`;
+
+  try {
+    const response = await axios.post(
+      "https://router.huggingface.co/v1/chat/completions",
+      {
+        model: "openai/gpt-oss-20b:fireworks-ai", // ✅ pick any supported chat model
+        messages: [
+          { role: "system", content: "You are a helpful assistant." },
+          { role: "user", content: prompt }
+        ]
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.HUGGINGFACE_API_KEY}`,
+          "Content-Type": "application/json"
+        }
+      }
+    );
+    let content = response.data.choices[0].message.content;
+
+    // 🧹 Clean markdown formatting if present
+    content = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+
+    return JSON.parse(content);
+  } catch (e) {
+    return { decisions: [], tasks: [], deadlines: [], error: e.message };
+  }
+}
+
+module.exports = { 
+  generateText, 
+  transcribeAudio, 
+  translateText, 
+  summarizeText, 
+  generateStructuredNotes
+};
