@@ -102,7 +102,7 @@ app.post('/api/upload', upload.single('audio'), async (req, res) => {
   const summary = await summarizeText(transcription);
 
   // Optional: Generate structured notes
-  const structuredNotes = await generateStructuredNotes(transcription);
+  const structuredNotes = await generateStructuredNotes(transcription); // it should be summary not transcription. this is for testing purpose only 
 
   // Optional: Translate transcription
   const translations = {};

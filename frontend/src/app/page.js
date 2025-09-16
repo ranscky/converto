@@ -9,6 +9,7 @@ export default function Home() {
     const [ meetingID, setMeetingID ] = useState("");
     const [ transcripts, setTranscripts ] = useState([]);
     const [ summary, setSummary ] = useState("");
+    const [ structuredNotes, setStructuredNotes ] = useState(null);
     // const [ isRecording, setIsRecording ] = useState(false);
     const [ selectedLanguages, setSelectedLanguages ] = useState(['es', 'fr', 'ru', 'zh']);
     const [ translations, setTranslations ] = useState({});
@@ -46,6 +47,7 @@ export default function Home() {
         setFileMessage(data.message || "File uploaded successfully");
         setTranscript(data.transcription || "");
         setSummary(data.summary || "");
+        setStructuredNotes(data.structuredNotes || null);
         setMeetingID(data.meetingID || "");
         setTranslations(data.translations || {});
         // Refresh transcripts list
@@ -152,6 +154,42 @@ export default function Home() {
                             <p className="text-gray-700">{summary}</p>
                         </div>
                     )}
+                    {structuredNotes && (
+                        <div className="mt-4">
+                            <h3 className="text-lg font-semibold text-gray-600">Structured Notes</h3>
+                            {structuredNotes.decisions && (
+                                <div>
+                                    <h4 className="font-medium text-gray-600">Decisions:</h4>
+                                    <ul className="list-disc pl-5">
+                                        {structuredNotes.decisions.map((d, i) => (
+                                            <li key={i} className="text-gray-700">{d}</li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+                            {structuredNotes.tasks && (
+                                <div>
+                                    <h4 className="font-medium text-gray-600">Tasks:</h4>
+                                    <ul className="list-disc pl-5">
+                                        {structuredNotes.tasks.map((t, i) => (
+                                            <li key={i} className="text-gray-700">{t}</li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+                            {structuredNotes.deadlines && (
+                            <div>
+                                <h4 className="font-medium text-gray-600">Deadlines:</h4>
+                                <ul className="list-disc pl-5">
+                                    {structuredNotes.deadlines.map((d, i) => (
+                                        <li key={i} className="text-gray-700">{d}</li>
+                                    ))}
+                                </ul>
+                            </div>
+                            )}
+                        </div>
+                    )}
+
                     {Object.keys(translations).length > 0 && (
                         <div className="mt-4">
                             <h3 className="text-xl font-semibold text-gray-800">Translations</h3>
@@ -189,12 +227,9 @@ export default function Home() {
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 placeholder="Enter your prompt here..."
-                className="p-3 border border-gray-400 rounded-lg mb-4"
+                className="p-3 border border-gray-400 rounded-lg mb-4 text-gray-600"
             />
-            <button
-                onClick={handleGenerate}
-                className="bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 "
-            >
+            <button onClick={handleGenerate} className="bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700">
                 Generate Response
             </button>
             <p className="mt-4 text-gray-700">{generated}</p>
