@@ -63,6 +63,12 @@ export default function Home() {
         ));
     }
 
+    // PDF download handler
+    const handlePDFDownload = async (id) => {
+        if (!id) return;
+        window.open(`http://localhost:3001/api/download/${id}`, `_blank`);
+    }
+
     // Live recording handlers
     // const startRecording = async () => {
     //     try {
@@ -204,6 +210,9 @@ export default function Home() {
                                     <p className="text-gray-700">{text}</p>
                                 </div>
                             ))}
+                            <button onClick={() => handlePDFDownload(meetingID)} className="mt-4 bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700">
+                                Download PDF
+                            </button>
                         </div>
                     )}
                 </div>
@@ -216,6 +225,9 @@ export default function Home() {
                         <p className="text-sm text-gray-400">File: {t.fileName}</p>
                         <p className="text-sm text-gray-400">Date: {new Date(t.timestamp).toLocaleString()}</p>
                         <p className="mt-2 text-gray-400">{t.transcription.substring(0, 100)}...</p>
+                        <button onClick={() => handlePDFDownload(t.meetingID)} className="mt-4 bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700">
+                            Download PDF
+                        </button>
                     </div>
                 ))}
             </div>

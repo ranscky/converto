@@ -5,6 +5,7 @@ const cors = require('cors');
 const multer = require('multer');
 const ffmpeg = require('fluent-ffmpeg');
 const path = require('path');
+const PDFDocument = require('pdfkit');
 const { generateText, transcribeAudio, translateText, summarizeText, generateStructuredNotes } = require('./hf');
 const app = express();
 const port = 3001;
@@ -148,6 +149,92 @@ app.get('/api/transcripts', async(req, res) => {
   }
 });
 
+// PDF generation endpoint
+app.get('/api/download/:meetingID', async(req, res) => {
+  try {
+    await client.connect();
+    const database = client.db('converto');
+    const { meetingID } = req.params;
+    const doc = await database.collection('transcripts').findOne({ meetingID });
+
+    if (!doc) {
+      res.status(404).json({ message: 'Meeting not found' });
+    }
+
+    // Create PDF
+    const pdfDoc = new PDFDocument();
+
+    // Register font
+    // const fontPath = path.join(__dirname, 'fonts', 'NotoSansCJK-Regular.ttc'); 
+    // pdfDoc.registerFont('Noto', fontPath);
+    // pdfDoc.font('Noto');
+
+    // Set response headers
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=${meetingID}.pdf`);
+    pdfDoc.pipe(res);
+
+    // Header
+    pdfDoc.fontSize(16).text(`Converto - Meeting Notes (ID: ${meetingID})`, { align: 'center' });
+    pdfDoc.moveDown();
+    pdfDoc.fontSize(12).text(`Date: ${new Date(doc.timestamp).toLocaleString()}`);
+    pdfDoc.text(`File: ${doc.fileName}`);
+    pdfDoc.moveDown();
+
+    // Transcript
+    pdfDoc.fontSize(14).text('Transcript');
+    pdfDoc.fontSize(12).text(doc.transcription);
+    pdfDoc.moveDown();
+
+    // Summary
+    if (doc.summary) {
+      pdfDoc.fontSize(14).text('Summary');
+      pdfDoc.fontSize(12).text(doc.summary);
+      pdfDoc.moveDown();
+    }
+
+    // Structured Notes
+    if (doc.structuredNotes) {
+      pdfDoc.fontSize(14).text('Structured Notes');
+      if (doc.structuredNotes.decisions) {
+        pdfDoc.fontSize(12).text('Decisions:');
+        doc.structuredNotes.decisions.forEach(d => {
+          pdfDoc.text(`-  ${d}`);
+        });
+      }
+      if (doc.structuredNotes.tasks) {
+        pdfDoc.fontSize(12).text('Tasks:');
+        doc.structuredNotes.tasks.forEach(t => {
+          pdfDoc.text(`-  ${t}`);
+        });
+      }
+      if (doc.structuredNotes.deadlines) {
+        pdfDoc.fontSize(12).text('Deadlines:');
+        doc.structuredNotes.deadlines.forEach(d => {
+          pdfDoc.text(`-  ${d}`);
+        });
+      }
+      pdfDoc.moveDown();
+    }
+
+    // Translations
+    if (doc.translations) {
+      pdfDoc.fontSize(14).text('Translations');
+      Object.entries(doc.translations).forEach(([lang, text]) => {
+        pdfDoc.fontSize(12).text(`${
+          lang === 'es' ? 'Spanish' :
+          lang === 'fr' ? 'French' :
+          lang === 'ru' ? 'Russian' :
+          lang === 'zh' ? 'Chinese' : lang
+        }:`);
+        pdfDoc.text(text);
+      });
+      }
+    pdfDoc.end();
+  } catch (e) {
+    res.status(500).json({ message: 'Error generating PDF - '+ e.message });
+  }
+})
 // Start server
 app.listen(port, () => {
     console.log(`Server running at http://localhost:${port}`);
