@@ -225,6 +225,23 @@ export default function Home() {
                         <p className="text-sm text-gray-400">File: {t.fileName}</p>
                         <p className="text-sm text-gray-400">Date: {new Date(t.timestamp).toLocaleString()}</p>
                         <p className="mt-2 text-gray-400">{t.transcription.substring(0, 100)}...</p>
+                        {t.summary && (
+                            <p className="mt-2 text-gray-400">Summary: {t.summary.substring(0, 100)}...</p>
+                        )}
+                        {t.structuredNotes && (
+                            <div className="mt-2 text-gray-400">
+                                <p className="font-medium">Structured Notes:</p>
+                                {t.structuredNotes.decisions && (
+                                    <p className="mt-2">Decisions: {t.structuredNotes.decisions.join(', ')}...</p>
+                                )}
+                                {t.structuredNotes.tasks && (
+                                    <p className="mt-2">Tasks: {t.structuredNotes.tasks.join(', ')}...</p>
+                                )}
+                                {t.structuredNotes.deadlines && (
+                                    <p className="mt-2">Deadlines: {t.structuredNotes.deadlines.join(', ')}...</p>
+                                )}
+                            </div>
+                        )}
                         <button onClick={() => handlePDFDownload(t.meetingID)} className="mt-4 bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700">
                             Download PDF
                         </button>
