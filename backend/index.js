@@ -172,7 +172,7 @@ app.get('/api/download/:meetingID', async(req, res) => {
     }
 
     // Create PDF
-    const pdfDoc = new PDFDocument();
+    const pdfDoc = new PDFDocument({ margin: 50, size: 'A4' });
 
     // Register font
     // const fontPath = path.join(__dirname, 'fonts', 'NotoSansCJK-Regular.ttc'); 
@@ -185,41 +185,41 @@ app.get('/api/download/:meetingID', async(req, res) => {
     pdfDoc.pipe(res);
 
     // Header
-    pdfDoc.fontSize(16).text(`Converto - Meeting Notes (ID: ${meetingID})`, { align: 'center' });
+    pdfDoc.font('Helvetica-Bold').fontSize(16).fillColor('navy').text(`Converto - Meeting Notes (ID: ${meetingID})`, { align: 'center' });
     pdfDoc.moveDown();
-    pdfDoc.fontSize(12).text(`Date: ${new Date(doc.timestamp).toLocaleString()}`);
+    pdfDoc.font('Helvetica').fontSize(12).fillColor('black').text(`Date: ${new Date(doc.timestamp).toLocaleString()}`);
     pdfDoc.text(`File: ${doc.fileName}`);
     pdfDoc.moveDown();
 
     // Transcript
-    pdfDoc.fontSize(14).text('Transcript');
-    pdfDoc.fontSize(12).text(doc.transcription);
+    pdfDoc.font('Helvetica').fontSize(14).text('Transcript');
+    pdfDoc.font('Helvetica').fontSize(12).text(doc.transcription, { align: 'justify' });
     pdfDoc.moveDown();
 
     // Summary
     if (doc.summary) {
-      pdfDoc.fontSize(14).text('Summary');
-      pdfDoc.fontSize(12).text(doc.summary);
+      pdfDoc.font('Helvetica').fontSize(14).text('Summary');
+      pdfDoc.font('Helvetica').fontSize(12).text(doc.summary, { align: 'justify' });
       pdfDoc.moveDown();
     }
 
     // Structured Notes
     if (doc.structuredNotes) {
-      pdfDoc.fontSize(14).text('Structured Notes');
+      pdfDoc.font('Helvetica').fontSize(14).text('Structured Notes');
       if (doc.structuredNotes.decisions) {
-        pdfDoc.fontSize(12).text('Decisions:');
+        pdfDoc.font('Helvetica').fontSize(12).text('Decisions:');
         doc.structuredNotes.decisions.forEach(d => {
           pdfDoc.text(`-  ${d}`);
         });
       }
       if (doc.structuredNotes.tasks) {
-        pdfDoc.fontSize(12).text('Tasks:');
+        pdfDoc.font('Helvetica').fontSize(12).text('Tasks:');
         doc.structuredNotes.tasks.forEach(t => {
           pdfDoc.text(`-  ${t}`);
         });
       }
       if (doc.structuredNotes.deadlines) {
-        pdfDoc.fontSize(12).text('Deadlines:');
+        pdfDoc.font('Helvetica').fontSize(12).text('Deadlines:');
         doc.structuredNotes.deadlines.forEach(d => {
           pdfDoc.text(`-  ${d}`);
         });
@@ -229,15 +229,15 @@ app.get('/api/download/:meetingID', async(req, res) => {
 
     // Translations
     if (doc.translations) {
-      pdfDoc.fontSize(14).text('Translations');
+      pdfDoc.font('Helvetica').fontSize(14).text('Translations');
       Object.entries(doc.translations).forEach(([lang, text]) => {
-        pdfDoc.fontSize(12).text(`${
+        pdfDoc.font('Helvetica').fontSize(12).text(`${
           lang === 'es' ? 'Spanish' :
           lang === 'fr' ? 'French' :
           lang === 'ru' ? 'Russian' :
           lang === 'zh' ? 'Chinese' : lang
         }:`);
-        pdfDoc.text(text);
+        pdfDoc.text(text, { align: 'justify' });
       });
       }
     pdfDoc.end();
