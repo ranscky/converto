@@ -10,6 +10,8 @@ const { generateText, transcribeAudio, translateText, summarizeText, generateStr
 const app = express();
 const port = 3001;
 
+const cache = new Map();
+
 const axios = require("axios");
 
 const fs = require('fs').promises;
@@ -79,8 +81,14 @@ app.post('/api/upload', upload.single('audio'), async (req, res) => {
   const inputPath = req.file.path;
   let outputPath = path.join('uploads', `${req.file.filename}.wav`);
   const selectedLanguages = req.body.languages ? req.body.languages.split(',') : ['es', 'fr', 'ru', 'zh'];
+  const cacheKey = `${req.file.originalname}_${selectedLanguages.join(',')}`;
 
+  // Check cache
   try {
+    if (cache.has(cacheKey)) {
+      const cachedData = cache.get(cacheKey);
+      return res.json(cachedData);
+    }    
     // Convert video to audio if needed
     if (req.file.mimetype === 'video/mp4') {
       await new Promise((resolve, reject) => {
@@ -99,13 +107,13 @@ app.post('/api/upload', upload.single('audio'), async (req, res) => {
   // Transcribe audio
   const transcription = await transcribeAudio(outputPath);
 
-  // Optional: Summarize transcription
+  // Summarize transcription
   const summary = await summarizeText(transcription);
 
-  // Optional: Generate structured notes
+  // Generate structured notes
   const structuredNotes = await generateStructuredNotes(transcription); // it should be summary not transcription. this is for testing purpose only 
 
-  // Optional: Translate transcription
+  // Translate transcription
   const translations = {};
   for (const lang of selectedLanguages) {
     translations[lang] = await translateText(transcription, lang);
@@ -131,7 +139,9 @@ app.post('/api/upload', upload.single('audio'), async (req, res) => {
   if(req.file.mimetype === 'video/mp4') {
     await fs.unlink(outputPath);
   }
-  res.json({message: 'File processed and stored', meetingID, transcription, summary, translations, structuredNotes });
+  const response = {message: 'File processed and stored', meetingID, transcription, summary, translations, structuredNotes };
+  cache.set(cacheKey, response);
+  res.json(response);
   } catch (e) {
     res.status(500).json({ message: 'Error processing file - '+ e.message });
   }
