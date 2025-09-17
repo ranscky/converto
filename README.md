@@ -72,14 +72,39 @@ node index.js
 2. Upload an audio file
 3. Use the text generation feature to test AI capabilities
 
-## 🚧 Current Development Status
+## 🚧 Development Status
 
-- ✅ Basic frontend UI
-- ✅ File upload system
-- ✅ MongoDB integration
-- ✅ Hugging Face AI integration
-- 🔄 Processing pipeline in development
-- 🔄 Live recording and chunked upload support
-- ✅ Transcript display and meeting ID assignment
-- ⚠️ Error handling and file cleanup improvements
-- 📅 API integrations planned
+## Week 1–2: Foundations & Core Setup
+
+Goal: Get the development environment, repository, and base application running.
+
+Tasks completed:
+- Set up GitHub repository with main and dev branches.
+- Scaffolded Next.js frontend and Node.js (Express) backend.
+- Integrated TailwindCSS for styling and responsive layout.
+- Configured MongoDB Atlas and added basic connection code.
+- Created .env setup for API keys (HUGGINGFACE_API_KEY, GOOGLE_CALENDAR, SLACK, JIRA).
+- Added Hugging Face Inference client integration in the backend for future transcription and model calls.
+
+## Week 3–4: Automatic Speech Recognition (ASR) Pipeline
+
+Goal: Process meeting audio/video into reliable text.
+
+Tasks completed:
+- Implemented file upload endpoint accepting .mp3, .wav, and .mp4 (Multer).
+- Integrated Hugging Face ASR (Whisper) for server-side transcription.
+- Persisted raw transcripts and meeting metadata to MongoDB; added GET /api/transcripts.
+- Exposed summarization and structured-notes hooks downstream of transcription.
+- Added frontend transcript list and meeting detail view to surface raw transcripts and metadata.
+- Implemented experimental WebRTC live transcription as an optional stretch feature.
+
+## Week 5–6: Translation & Summarization
+
+Goal: Make transcripts multilingual and concise.
+
+Tasks completed:
+- Integrated translations for Spanish, French, Mandarin, and Russian using Hugging Face models.
+- Added summarization using facebook/bart-large-cnn to produce concise meeting briefs.
+- Implemented structured meeting notes extraction with JSON normalization and debug output.
+- Enabled user-selected output languages in the frontend UI and translation pipeline.
+- Added PDF export to include transcripts, summaries, and structured notes.
