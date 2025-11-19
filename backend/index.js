@@ -6,7 +6,7 @@ const multer = require('multer');
 const ffmpeg = require('fluent-ffmpeg');
 const path = require('path');
 const PDFDocument = require('pdfkit');
-const { generateText, transcribeAudio, translateText, summarizeText, generateStructuredNotes } = require('./hf');
+const { generateText, transcribeAudio, translateText, summarizeText, generateStructuredNotes, analyzeSentiment } = require('./hf');
 const app = express();
 const port = 3001;
 
@@ -113,6 +113,9 @@ app.post('/api/upload', upload.single('audio'), async (req, res) => {
   // Generate structured notes
   const structuredNotes = await generateStructuredNotes(transcription); // it should be summary not transcription. this is for testing purpose only 
 
+  // Analyze sentiment
+  const sentiment = await analyzeSentiment(transcription);
+
   // Translate transcription
   const translations = {};
   for (const lang of selectedLanguages) {
@@ -129,6 +132,7 @@ app.post('/api/upload', upload.single('audio'), async (req, res) => {
     transcription,
     summary,
     structuredNotes,
+    sentiment,
     translations,
     fileName: req.file.originalname,
     timestamp: new Date()
@@ -139,7 +143,7 @@ app.post('/api/upload', upload.single('audio'), async (req, res) => {
   if(req.file.mimetype === 'video/mp4') {
     await fs.unlink(outputPath);
   }
-  const response = {message: 'File processed and stored', meetingID, transcription, summary, translations, structuredNotes };
+  const response = {message: 'File processed and stored', meetingID, transcription, summary, translations, structuredNotes, sentiment };
   cache.set(cacheKey, response);
   res.json(response);
   } catch (e) {
@@ -224,6 +228,14 @@ app.get('/api/download/:meetingID', async(req, res) => {
           pdfDoc.text(`-  ${d}`);
         });
       }
+      pdfDoc.moveDown();
+    }
+
+    // Sentiment
+    if (doc.sentiment) {
+      pdfDoc.font('Helvetica').fontSize(14).text('Sentiment');
+      pdfDoc.font('Helvetica').fontSize(12).text(`Sentiment: ${doc.sentiment.label}`);
+      pdfDoc.font('Helvetica').fontSize(12).text(`Score: ${doc.sentiment.score}`);
       pdfDoc.moveDown();
     }
 

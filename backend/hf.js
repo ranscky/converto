@@ -70,7 +70,7 @@ async function translateText(text, targetLanguage) {
   };
   try {
     const response = await axios.post(
-      `https://api-inference.huggingface.co/models/${modelMap[targetLanguage]}`,
+      `https://router.huggingface.co/hf-inference/models/${modelMap[targetLanguage]}`,
       { inputs: text },
       { headers: { Authorization: `Bearer ${process.env.HUGGINGFACE_API_KEY}` } },
     );
@@ -84,7 +84,7 @@ async function translateText(text, targetLanguage) {
 async function summarizeText(text) {
   try {
     const response = await axios.post(
-      "https://api-inference.huggingface.co/models/facebook/bart-large-cnn",
+      "https://router.huggingface.co/hf-inference/models/facebook/bart-large-cnn",
       { inputs: text },
       { headers: { Authorization: `Bearer ${process.env.HUGGINGFACE_API_KEY}` } },
     );
@@ -138,10 +138,24 @@ async function generateStructuredNotes(summary) {
   }
 }
 
+async function analyzeSentiment(text) {
+  try {
+    const response = await axios.post (
+      "https://router.huggingface.co/hf-inference/models/tabularisai/multilingual-sentiment-analysis",
+      { inputs: text },
+      { headers: { Authorization: `Bearer ${process.env.HUGGINGFACE_API_KEY}` } }
+    );
+    return response.data[0];
+  } catch (error) {
+    return { label: 'Error', score: 0, message: `Sentiment Analysis Error: ${error.message}}` };
+  }
+}
+
 module.exports = { 
   generateText, 
   transcribeAudio, 
   translateText, 
   summarizeText, 
-  generateStructuredNotes
+  generateStructuredNotes,
+  analyzeSentiment
 };
