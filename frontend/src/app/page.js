@@ -9,7 +9,8 @@ export default function Home() {
     const [ meetingID, setMeetingID ] = useState("");
     const [ transcripts, setTranscripts ] = useState([]);
     const [ summary, setSummary ] = useState("");
-    const [ structuredNotes, setStructuredNotes ] = useState(null);
+    const [ structuredNotes, setStructuredNotes ] = useState({});
+    const [ sentiment, setSentiment ] = useState({});
     // const [ isRecording, setIsRecording ] = useState(false);
     const [ selectedLanguages, setSelectedLanguages ] = useState(['es', 'fr', 'ru', 'zh']);
     const [ translations, setTranslations ] = useState({});
@@ -47,7 +48,8 @@ export default function Home() {
         setFileMessage(data.message || "File uploaded successfully");
         setTranscript(data.transcription || "");
         setSummary(data.summary || "");
-        setStructuredNotes(data.structuredNotes || null);
+        setStructuredNotes(data.structuredNotes || {});
+        setSentiment(data.sentiment || {});
         setMeetingID(data.meetingID || "");
         setTranslations(data.translations || {});
         // Refresh transcripts list
@@ -149,17 +151,22 @@ export default function Home() {
                 {isRecording ? 'Stop Recording' : 'Start Live Recording'}
             </button> */}
 
+                {/* File upload message */}
             <p className="text-green-600 mb-4">{fileMessage}</p>
+            {/** Transcript */}
             {transcript && (
                 <div className="mb-6 p-4 bg-gray-50 rounded-lg">
                     <h2 className="text-2xl font-semibold text-gray-800">Transcript (ID: {meetingID})</h2>
+
                     <p className="mt-2 text-gray-700">{transcript}</p>
+                    {/** Summary */}
                     {summary && (
                         <div className="mt-4">
                             <h3 className="text-xl font-semibold text-gray-800">Summary</h3>
                             <p className="text-gray-700">{summary}</p>
                         </div>
                     )}
+                    {/** Structured Notes */}
                     {structuredNotes && (
                         <div className="mt-4">
                             <h3 className="text-lg font-semibold text-gray-600">Structured Notes</h3>
@@ -195,7 +202,17 @@ export default function Home() {
                             )}
                         </div>
                     )}
-
+                    {/** Sentiment Analysis */}
+                    {sentiment.label && (
+                        <div className="mt-4">
+                            <h3 className="text-xl font-semibold text-gray-800">Sentiment Analysis</h3>
+                            <p className="text-gray-700">
+                                Tone: {sentiment.label} (Confidence: {(sentiment.score * 100).toFixed(2)}%)
+                            </p>
+                            <p className="text-gray-700">Score: {sentiment.score}</p>
+                        </div>
+                    )}
+                    {/** Translations */}
                     {Object.keys(translations).length > 0 && (
                         <div className="mt-4">
                             <h3 className="text-xl font-semibold text-gray-800">Translations</h3>
@@ -217,6 +234,8 @@ export default function Home() {
                     )}
                 </div>
             )}
+
+            {/* Previous transcripts */}
             <div className="mb-6">
                 <h2 className="text-2xl font-semibold text-gray-800">Previous Transcripts</h2>
                 {transcripts && transcripts.map(t => (
@@ -224,10 +243,14 @@ export default function Home() {
                         <h3 className="text-lg font-medium text-gray-500">Meeting ID: {t.meetingID}</h3>
                         <p className="text-sm text-gray-400">File: {t.fileName}</p>
                         <p className="text-sm text-gray-400">Date: {new Date(t.timestamp).toLocaleString()}</p>
-                        <p className="mt-2 text-gray-400">{t.transcription.substring(0, 100)}...</p>
+
+                            {/** Transcription */}
+                        <p className="mt-2 text-gray-400">Transcription: {t.transcription.substring(0, 100)}...</p>
+                            {/** Summary */}
                         {t.summary && (
                             <p className="mt-2 text-gray-400">Summary: {t.summary.substring(0, 100)}...</p>
                         )}
+                            {/** Structured Notes */}
                         {t.structuredNotes && (
                             <div className="mt-2 text-gray-400">
                                 <p className="font-medium">Structured Notes:</p>
@@ -242,12 +265,23 @@ export default function Home() {
                                 )}
                             </div>
                         )}
+                        {/** Sentiment Analysis */}
+                        {t.sentiment && (
+                            <div className="mt-2">
+                                <p className="font-medium text-gray-400">
+                                    Sentiment Analysis: Tone: {t.sentiment[0].label}, Confidence: {(t.sentiment[0].score * 100).toFixed(2)}%
+                                </p>
+                            </div>
+                        )}
+                            {/** PDF Download */}
                         <button onClick={() => handlePDFDownload(t.meetingID)} className="mt-4 bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700">
                             Download PDF
                         </button>
+
                     </div>
                 ))}
             </div>
+            {/** AI Chatbot */}
             <hr className="w-full border-gray-300 my-6" />
             <h2 className="text-3xl font-bold text-gray-800 mb-4">AI Chatbot</h2>
             <p className="text-gray-600 mb-4">Ask questions or generate content based on your transcripts</p>
