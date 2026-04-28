@@ -10,6 +10,11 @@ const { generateText, transcribeAudio, translateText, summarizeText, generateStr
 const app = express();
 const port = 3001;
 
+const { meetingQueue, worker } = require('./queue');
+const storage = require('./storage');
+const { SlackProvider, JiraProvider } = require('./services/integrations');
+const brain = require('./services/brain');
+const billing = require('./services/billing');
 const cache = new Map();
 
 const axios = require("axios");
@@ -25,7 +30,7 @@ const upload = multer({
         cb(null, true);
       } else {
         cb(new Error('Invalid file type. Only audio and video files are allowed.'));
-    }
+      }
   },
   limits: { fileSize: 100 * 1024 * 1024 } // limit file size to 100MB
 });
@@ -73,77 +78,103 @@ app.post('/api/generate', async (req, res) => {
 
 // File upload and processing endpoint
 app.post('/api/upload', upload.single('audio'), async (req, res) => {
-
-  // Validate file presence
   if (!req.file) {
     return res.status(400).json({ message: 'No file uploaded or invalid file type' });
-  } 
-  const inputPath = req.file.path;
-  let outputPath = path.join('uploads', `${req.file.filename}.wav`);
-  const selectedLanguages = req.body.languages ? req.body.languages.split(',') : ['es', 'fr', 'ru', 'zh'];
-  const cacheKey = `${req.file.originalname}_${selectedLanguages.join(',')}`;
-
-  // Check cache
-  try {
-    if (cache.has(cacheKey)) {
-      const cachedData = cache.get(cacheKey);
-      return res.json(cachedData);
-    }    
-    // Convert video to audio if needed
-    if (req.file.mimetype === 'video/mp4') {
-      await new Promise((resolve, reject) => {
-        ffmpeg(inputPath)
-        .output(outputPath)
-        .audioCodec('pcm_s16le')
-        .withAudioChannels(1)
-        .withAudioFrequency(16000) //Whisper requires 16kHz audio
-        .on('end', resolve)
-        .on('error', reject)
-        .run();
-      });
-  } else {
-    outputPath = inputPath; //Use original file for .mp3/.wav
-  }
-  // Transcribe audio
-  const transcription = await transcribeAudio(outputPath);
-
-  // Summarize transcription
-  const summary = await summarizeText(transcription);
-
-  // Generate structured notes
-  const structuredNotes = await generateStructuredNotes(transcription); // it should be summary not transcription. this is for testing purpose only 
-
-  // Translate transcription
-  const translations = {};
-  for (const lang of selectedLanguages) {
-    translations[lang] = await translateText(transcription, lang);
   }
 
-  // Store transcription in MongoDB
-  await client.connect();
-  const database = client.db('converto');
   const meetingID = `meeting_${Date.now()}`;
-  await database.collection('transcripts').createIndex({ meetingID: 1 });
-  await database.collection('transcripts').insertOne({
-    meetingID,
-    transcription,
-    summary,
-    structuredNotes,
-    translations,
-    fileName: req.file.originalname,
-    timestamp: new Date()
-  });
+  const selectedLanguages = req.body.languages ? req.body.languages.split(',') : ['es', 'fr', 'ru', 'zh'];
 
-  // Clean up uploaded files
-  await fs.unlink(inputPath);
-  if(req.file.mimetype === 'video/mp4') {
-    await fs.unlink(outputPath);
-  }
-  const response = {message: 'File processed and stored', meetingID, transcription, summary, translations, structuredNotes };
-  cache.set(cacheKey, response);
-  res.json(response);
+  try {
+    // Trigger background job
+    const job = await meetingQueue.add('process-meeting', {
+      inputPath: req.file.path,
+      filename: req.file.filename,
+      fileName: req.file.originalname,
+      mimetype: req.file.mimetype,
+      selectedLanguages,
+      meetingID,
+    });
+
+    res.json({ 
+      message: 'File uploaded and processing started', 
+      jobId: job.id, 
+      meetingID 
+    });
   } catch (e) {
-    res.status(500).json({ message: 'Error processing file - '+ e.message });
+    res.status(500).json({ message: 'Error queuing file - ' + e.message });
+  }
+});
+
+// Execution endpoint to push tasks/decisions to external tools
+app.post('/api/execute', async (req, res) => {
+  try {
+    const { provider, type, content, config, userId } = req.body;
+
+    if (!provider || !type || !content || !userId) {
+      return res.status(400).json({ message: 'Missing provider, type, content, or userId' });
+    }
+
+    const userTier = await billing.getUserTier(userId);
+    if (!billing.checkEntitlement(userTier, 'hasAgenticExecution')) {
+      return res.status(403).json({ message: 'This feature requires a PRO or SOVEREIGN plan' });
+    }
+
+    let service;
+    if (provider === 'slack') {
+      service = new SlackProvider(config.token, config.channelId);
+    } else if (provider === 'jira') {
+      service = new JiraProvider(config.domain, config.email, config.token);
+    } else {
+      return res.status(400).json({ message: 'Unsupported provider' });
+    }
+
+    const result = type === 'task' 
+      ? await service.pushTask(content) 
+      : await service.pushDecision(content);
+
+    res.json({ message: 'Successfully pushed to ' + provider, result });
+  } catch (e) {
+    res.status(500).json({ message: 'Execution failed - ' + e.message });
+  }
+});
+
+// Institutional Memory query endpoint
+app.post('/api/query', async (req, res) => {
+  try {
+    const { question, userId } = req.body;
+    if (!question || !userId) return res.status(400).json({ message: 'Question and userId are required' });
+
+    const userTier = await billing.getUserTier(userId);
+    if (!billing.checkEntitlement(userTier, 'hasRAG')) {
+      return res.status(403).json({ message: 'Institutional Memory requires a PRO or SOVEREIGN plan' });
+    }
+
+    const { context } = await brain.query(question);
+    
+    const prompt = \`You are the Institutional Memory Brain of Converto. 
+Using the following snippets from past meetings, answer the user's question accurately. 
+If the answer isn't in the context, say you don't know.
+
+Context:
+\${context}
+
+Question: \${question}\`;
+
+    const response = await axios.post(
+      "https://router.huggingface.co/v1/chat/completions",
+      {
+        model: "openai/gpt-oss-20b:fireworks-ai", 
+        messages: [{ role: "user", content: prompt }]
+      },
+      {
+        headers: { Authorization: \`Bearer \${process.env.HUGGINGFACE_API_KEY}\` }
+      }
+    );
+
+    res.json({ answer: response.data.choices[0].message.content });
+  } catch (e) {
+    res.status(500).json({ message: 'Query failed - ' + e.message });
   }
 });
 
@@ -171,81 +202,64 @@ app.get('/api/download/:meetingID', async(req, res) => {
       res.status(404).json({ message: 'Meeting not found' });
     }
 
-    // Create PDF
     const pdfDoc = new PDFDocument({ margin: 50, size: 'A4' });
-
-    // Register font
-    // const fontPath = path.join(__dirname, 'fonts', 'NotoSansCJK-Regular.ttc'); 
-    // pdfDoc.registerFont('Noto', fontPath);
-    // pdfDoc.font('Noto');
-
-    // Set response headers
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename=${meetingID}.pdf`);
+    res.setHeader('Content-Disposition', \`attachment; filename=\${meetingID}.pdf\`);
     pdfDoc.pipe(res);
 
-    // Header
-    pdfDoc.font('Helvetica-Bold').fontSize(16).fillColor('navy').text(`Converto - Meeting Notes (ID: ${meetingID})`, { align: 'center' });
+    pdfDoc.font('Helvetica-Bold').fontSize(16).fillColor('navy').text(\`Converto - Meeting Notes (ID: \${meetingID})\`, { align: 'center' });
     pdfDoc.moveDown();
-    pdfDoc.font('Helvetica').fontSize(12).fillColor('black').text(`Date: ${new Date(doc.timestamp).toLocaleString()}`);
-    pdfDoc.text(`File: ${doc.fileName}`);
+    pdfDoc.font('Helvetica').fontSize(12).fillColor('black').text(\`Date: \${new Date(doc.timestamp).toLocaleString()}\`);
+    pdfDoc.text(\`File: \${doc.fileName}\`);
     pdfDoc.moveDown();
 
-    // Transcript
     pdfDoc.font('Helvetica').fontSize(14).text('Transcript');
     pdfDoc.font('Helvetica').fontSize(12).text(doc.transcription, { align: 'justify' });
     pdfDoc.moveDown();
 
-    // Summary
     if (doc.summary) {
       pdfDoc.font('Helvetica').fontSize(14).text('Summary');
       pdfDoc.font('Helvetica').fontSize(12).text(doc.summary, { align: 'justify' });
       pdfDoc.moveDown();
     }
 
-    // Structured Notes
     if (doc.structuredNotes) {
       pdfDoc.font('Helvetica').fontSize(14).text('Structured Notes');
       if (doc.structuredNotes.decisions) {
         pdfDoc.font('Helvetica').fontSize(12).text('Decisions:');
         doc.structuredNotes.decisions.forEach(d => {
-          pdfDoc.text(`-  ${d}`);
+          pdfDoc.text(\`-  \${d}\`);
         });
       }
       if (doc.structuredNotes.tasks) {
         pdfDoc.font('Helvetica').fontSize(12).text('Tasks:');
         doc.structuredNotes.tasks.forEach(t => {
-          pdfDoc.text(`-  ${t}`);
+          pdfDoc.text(\`-  \${t}\`);
         });
       }
       if (doc.structuredNotes.deadlines) {
         pdfDoc.font('Helvetica').fontSize(12).text('Deadlines:');
         doc.structuredNotes.deadlines.forEach(d => {
-          pdfDoc.text(`-  ${d}`);
+          pdfDoc.text(\`-  \${d}\`);
         });
       }
       pdfDoc.moveDown();
     }
 
-    // Translations
     if (doc.translations) {
       pdfDoc.font('Helvetica').fontSize(14).text('Translations');
       Object.entries(doc.translations).forEach(([lang, text]) => {
-        pdfDoc.font('Helvetica').fontSize(12).text(`${
-          lang === 'es' ? 'Spanish' :
-          lang === 'fr' ? 'French' :
-          lang === 'ru' ? 'Russian' :
-          lang === 'zh' ? 'Chinese' : lang
-        }:`);
+        const langName = { 'es': 'Spanish', 'fr': 'French', 'ru': 'Russian', 'zh': 'Chinese' }[lang] || lang;
+        pdfDoc.font('Helvetica').fontSize(12).text(\`\${langName}:\`);
         pdfDoc.text(text, { align: 'justify' });
       });
-      }
+    }
     pdfDoc.end();
   } catch (e) {
     res.status(500).json({ message: 'Error generating PDF - '+ e.message });
   }
 })
-// Start server
+
 app.listen(port, () => {
-    console.log(`Server running at http://localhost:${port}`);
+    console.log(\`Server running at http://localhost:\${port}\`);
 });
